@@ -1,0 +1,17 @@
+[package]
+name = "batson-perf"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+datafusion = "42.0.0"
+datafusion-functions-json = "0.42.0"
+batson = { path = "../jiter/crates/batson" }
+jiter = { path = "../jiter/crates/jiter" }
+#murmur3 = "0.5.2"
+rand = "0.8.5"
+tokio = { version = "1.39.2", features = ["full"] }
+
+[profile.profiling]
+inherits = "release"
+debug = true
