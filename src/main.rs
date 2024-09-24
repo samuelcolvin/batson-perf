@@ -4,7 +4,9 @@ use std::path::Path;
 use std::sync::Arc;
 use std::time::Instant;
 
-use datafusion::arrow::array::{Array, LargeStringBuilder, RecordBatch, UInt64Builder, BooleanArray, BinaryBuilder, BinaryArray};
+use datafusion::arrow::array::{
+    Array, BinaryArray, BinaryBuilder, BooleanArray, LargeStringBuilder, RecordBatch, UInt64Builder,
+};
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::arrow::error::ArrowError;
 use datafusion::arrow::util::pretty::print_batches;
@@ -24,18 +26,22 @@ async fn main() {
 
 const SEARCH_TERM: &'static str = "host.id";
 // const SEARCH_TERM: &'static str = "row12";
+
+#[rustfmt::skip]
 const MODES: &[Mode] = &[
     Mode::FilterJson,
     Mode::FilterBatson,
 ];
+
 const ROWS: usize = 1_000_000;
-const COMPRESSION: &str = "snappy";
+const COMPRESSION: &str = "zstd(1)";
+const PUSHDOWN_FILTERS: bool = false;
 
 async fn run() -> DataFusionResult<()> {
     let config = SessionConfig::new()
         .set_str("datafusion.sql_parser.dialect", "postgres")
         .set_str("datafusion.execution.parquet.compression", COMPRESSION)
-        // .set_bool("datafusion.execution.parquet.pushdown_filters", true)
+        .set_bool("datafusion.execution.parquet.pushdown_filters", PUSHDOWN_FILTERS)
         // .set_usize("datafusion.execution.batch_size", 128)
         ;
     let ctx = SessionContext::new_with_config(config);
@@ -53,7 +59,7 @@ async fn run() -> DataFusionResult<()> {
         let batches = df.collect().await?;
         let elapsed = start.elapsed();
         print_batches(&batches)?;
-        println!("mode: {mode:?} {COMPRESSION}, query took {elapsed:?}");
+        println!("mode: {mode:?} {COMPRESSION}, pushdown_filters: {PUSHDOWN_FILTERS}, query took {elapsed:?}");
     }
 
     // datafusion_functions_json::register_all(&mut ctx)?;
@@ -61,9 +67,12 @@ async fn run() -> DataFusionResult<()> {
     // ctx.register_udf(batson_contains);
     //
     // let df = ctx.sql(r#"
-    //     select id, json from records where json_contains(json, 'host.id') and not batson_contains(batson, 'host.id')
-    //     limit 5
+    //     select count(*) from records where json_contains(json, 'host.id')
     // "#).await?;
+    //
+    // let plan = df.clone().create_physical_plan().await?;
+    // dbg!(&plan);
+    //
     // let batches = df.collect().await?;
     // print_batches(&batches)?;
 
@@ -74,7 +83,7 @@ async fn run() -> DataFusionResult<()> {
 #[derive(Debug, Copy, Clone)]
 enum Mode {
     FilterJson,
-    FilterBatson
+    FilterBatson,
 }
 
 async fn build_dataframe(ctx: &SessionContext, mode: &Mode) -> DataFusionResult<DataFrame> {
@@ -85,7 +94,9 @@ async fn build_dataframe(ctx: &SessionContext, mode: &Mode) -> DataFusionResult<
 
     match mode {
         Mode::FilterJson => df.filter(json_contains.call(vec![col("json"), lit(SEARCH_TERM)])),
-        Mode::FilterBatson => df.filter(batson_contains.call(vec![col("batson"), lit(SEARCH_TERM)])),
+        Mode::FilterBatson => {
+            df.filter(batson_contains.call(vec![col("batson"), lit(SEARCH_TERM)]))
+        }
     }
 }
 
@@ -124,7 +135,9 @@ impl ScalarUDFImpl for BatsonContains {
 
     fn invoke(&self, args: &[ColumnarValue]) -> DataFusionResult<ColumnarValue> {
         let Some(ColumnarValue::Array(batson_column)) = args.first() else {
-            return exec_err!("batson_contains expects 2 arguments (batson_data, key), got no arguments");
+            return exec_err!(
+                "batson_contains expects 2 arguments (batson_data, key), got no arguments"
+            );
         };
         let Some(batson_column) = batson_column.as_any().downcast_ref::<BinaryArray>() else {
             return exec_err!(
@@ -133,7 +146,9 @@ impl ScalarUDFImpl for BatsonContains {
         };
 
         let Some(ColumnarValue::Scalar(ScalarValue::Utf8(Some(needle)))) = args.get(1) else {
-            return exec_err!("batson_contains expects 2 arguments (batson_data, key), got 1 argument");
+            return exec_err!(
+                "batson_contains expects 2 arguments (batson_data, key), got 1 argument"
+            );
         };
 
         let mut result: Vec<bool> = vec![false; batson_column.len()];
@@ -145,11 +160,11 @@ impl ScalarUDFImpl for BatsonContains {
                 match batson::get::contains(batson_data, &path) {
                     Ok(true) => {
                         result[index] = true;
-                    },
+                    }
                     Err(e) => {
                         return exec_err!("error decoding batson data: {:?}", e);
-                    },
-                    _ => {},
+                    }
+                    _ => {}
                 }
             }
         }
@@ -222,8 +237,7 @@ fn random_json(row: usize, rng: &mut ThreadRng) -> String {
     let mut json = String::new();
     json.push_str("{");
     // for _ in 0..rng.gen_range(2..=6) {
-    for i in 0..10 {
-    // for i in 0..rng.gen_range(5..=40) {
+    for i in 0..rng.gen_range(5..=40) {
         if json.len() > 1 {
             json.push_str(",");
         }
