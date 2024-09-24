@@ -6,9 +6,10 @@ edition = "2021"
 [dependencies]
 datafusion = "42.0.0"
 datafusion-functions-json = "0.42.0"
-batson = { path = "../jiter/crates/batson" }
-jiter = { path = "../jiter/crates/jiter" }
-#murmur3 = "0.5.2"
+#batson = { path = "../jiter/crates/batson" }
+#jiter = { path = "../jiter/crates/jiter" }
+batson = { git = "https://github.com/pydantic/jiter.git", branch = "batson" }
+jiter = { git = "https://github.com/pydantic/jiter.git", branch = "batson" }
 rand = "0.8.5"
 tokio = { version = "1.39.2", features = ["full"] }
 

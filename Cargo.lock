@@ -373,9 +373,10 @@ checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 [[package]]
 name = "batson"
 version = "0.5.0"
+source = "git+https://github.com/pydantic/jiter.git?branch=batson#6513df59a2086084a1c4899ae1a65b237ed07d3b"
 dependencies = [
  "bytemuck",
- "jiter 0.5.0",
+ "jiter 0.5.0 (git+https://github.com/pydantic/jiter.git?branch=batson)",
  "num-bigint",
  "serde",
  "serde_json",
@@ -390,7 +391,7 @@ dependencies = [
  "batson",
  "datafusion",
  "datafusion-functions-json",
- "jiter 0.5.0",
+ "jiter 0.5.0 (git+https://github.com/pydantic/jiter.git?branch=batson)",
  "rand",
  "tokio",
 ]
@@ -1431,19 +1432,6 @@ checksum = "49f1f14873335454500d59611f1cf4a4b0f786f9ac11f4312a78e4cf2566695b"
 [[package]]
 name = "jiter"
 version = "0.5.0"
-dependencies = [
- "ahash",
- "bitvec",
- "lexical-parse-float",
- "num-bigint",
- "num-traits",
- "pyo3",
- "smallvec 2.0.0-alpha.7",
-]
-
-[[package]]
-name = "jiter"
-version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02e23549143ef50eddffd46ba8cd0229b0a4500aef7518cf2eb0f41c9a09d22b"
 dependencies = [
@@ -1453,6 +1441,20 @@ dependencies = [
  "num-bigint",
  "num-traits",
  "smallvec 1.13.2",
+]
+
+[[package]]
+name = "jiter"
+version = "0.5.0"
+source = "git+https://github.com/pydantic/jiter.git?branch=batson#6513df59a2086084a1c4899ae1a65b237ed07d3b"
+dependencies = [
+ "ahash",
+ "bitvec",
+ "lexical-parse-float",
+ "num-bigint",
+ "num-traits",
+ "pyo3",
+ "smallvec 2.0.0-alpha.7",
 ]
 
 [[package]]
